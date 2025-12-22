@@ -45,7 +45,7 @@ library
     , semigroupoids        ^>= 6.0.1
     , servant-client       ^>= 0.20
     , servant-client-core  ^>= 0.20
-    , text                 ^>= { 1.2, 2.0 }
+    , text                 ^>= { 1.2, 2.0, 2.1 }
     , transformers-base    ^>= 0.4
     , unliftio-core        ^>= { 0.2 }
     , wai                  ^>= 3.2
