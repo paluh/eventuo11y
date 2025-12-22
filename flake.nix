@@ -2,7 +2,14 @@
   description = "An event-oriented observability library";
 
   inputs = {
-    haskell-nix.url = "github:input-output-hk/haskell.nix";
+    # hackage = {
+    #   url = "github:input-output-hk/hackage.nix";
+    #   flake = false;
+    # };
+    haskell-nix = {
+      url = "github:input-output-hk/haskell.nix?ref=2025.12.21";
+      # inputs.hackage.follows = "hackage";
+    };
     nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
@@ -33,54 +40,60 @@
             name = system;
 
             value = let
-              materializedRelative = "/nix/materialized/${system}";
-
-              materializedFor = component: ifExists (./. + materializedRelative + "/${component}");
+              # materializedRelative = "/nix/materialized/${system}";
+              # materializedFor = component: ifExists (./. + materializedRelative + "/${component}");
 
               pkgs = import nixpkgs {
                 inherit system;
                 overlays = [haskell-nix.overlay];
+
                 inherit (haskell-nix) config;
               };
 
-              tools = {
-                cabal = {
-                  inherit (project) index-state evalSystem;
-                  version = "3.8.1.0";
-                  materialized = materializedFor "cabal";
-                };
-                hoogle = {
-                  inherit (project) index-state evalSystem;
-                  version = "5.0.18.3";
-                  materialized = materializedFor "hoogle";
-                };
-              };
+              # tools = {
+              #   cabal = {
+              #     inherit (project) index-state evalSystem;
+              #     version = "3.8.1.0";
+              #     materialized = materializedFor "cabal";
+              #   };
+              #   hoogle = {
+              #     inherit (project) index-state evalSystem;
+              #     version = "5.0.18.3";
+              #     materialized = materializedFor "hoogle";
+              #   };
+              # };
 
               project = pkgs.haskell-nix.cabalProject' {
                 inherit evalSystem;
                 src = ./.;
-                compiler-nix-name = "ghc927";
-                shell.tools = tools;
-                shell.nativeBuildInputs = extraShellPackages pkgs;
-                shell.additional = hpkgs: [hpkgs.temporary];
-                materialized = materializedFor "project";
-              };
+                compiler-nix-name = "ghc98";
+                # shell.tools = tools;
+                # shell.nativeBuildInputs = extraShellPackages pkgs;
+                # shell.additional = hpkgs: [hpkgs.temporary];
+                # materialized = materializedFor "project";
 
-              tools-built = project.tools tools;
+                # flake.variants = {
+                #   # ghc966 = {}; # Alias for the default variant
+                #   # ghc984.compiler-nix-name = "ghc984";
+                #   # ghc9102.compiler-nix-name = "ghc9102";
+                #   ghc984 = {};
+                # };
+              };
+              # tools-built = project.tools tools;
             in {
               inherit pkgs project;
 
               update-all-materialized = evalPkgs.writeShellScript "update-all-materialized-${system}" ''
                 set -eEuo pipefail
-                mkdir -p .${materializedRelative}
-                cd .${materializedRelative}
-                echo "Updating project materialization" >&2
-                ${project.plan-nix.passthru.generateMaterialized} project
-                echo "Updating cabal materialization" >&2
-                ${tools-built.cabal.project.plan-nix.passthru.generateMaterialized} cabal
-                echo "Updating hoogle materialization" >&2
-                ${tools-built.hoogle.project.plan-nix.passthru.generateMaterialized} hoogle
               '';
+              # mkdir -p .${materializedRelative}
+              # cd .${materializedRelative}
+              # echo "Updating project materialization" >&2
+              # ${project.plan-nix.passthru.generateMaterialized} project
+              # echo "Updating cabal materialization" >&2
+              # ${tools-built.cabal.project.plan-nix.passthru.generateMaterialized} cabal
+              # echo "Updating hoogle materialization" >&2
+              # ${tools-built.hoogle.project.plan-nix.passthru.generateMaterialized} hoogle
             };
           })
           supportedSystems);
