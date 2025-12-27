@@ -11,10 +11,12 @@ module Observe.Event.Render.OpenTelemetry where
 
 import Control.Monad.IO.Class
 import Data.Text (Text, pack)
+import qualified Data.HashMap.Strict as HashMap
 import Observe.Event.Backend
 import OpenTelemetry.Context
 import OpenTelemetry.Context.ThreadLocal
 import OpenTelemetry.Trace.Core hiding (Event)
+import Data.Maybe (fromMaybe)
 
 -- | An 'EventBackend' built on a 'Tracer'.
 --
@@ -42,27 +44,27 @@ tracerEventBackend tracer render = backend
     backend =
       EventBackend
         { newEvent = \(NewEventArgs {..}) -> do
-            ctx <- maybe empty id <$> lookupContext
+            ctx <- fromMaybe empty <$> lookupContext
             let ctx' = case newEventParent of
                   Just s -> insertSpan s ctx
                   Nothing -> ctx
                 OTelRendered {..} = render newEventSelector
-            links <- traverse (fmap (flip NewLink []) . getSpanContext) newEventCauses
+            links <- traverse (fmap (`NewLink` mempty) . getSpanContext) newEventCauses
             s <-
               createSpanWithoutCallStack tracer ctx' eventName $
                 SpanArguments
                   { kind = eventKind,
-                    attributes = concatMap renderField newEventInitialFields,
+                    attributes = HashMap.fromList $ concatMap renderField newEventInitialFields,
                     links = links,
                     startTime = Nothing
                   }
             pure $
               Event
                 { reference = s,
-                  addField = addAttributes s . renderField,
+                  addField = addAttributes s . HashMap.fromList .renderField,
                   finalize = \me -> do
                     let recordError e = do
-                          recordException s [("exception.escaped", toAttribute True)] Nothing e
+                          recordException s (HashMap.singleton "exception.escaped" (toAttribute True)) Nothing e
                           setStatus s . Error . pack $ show e
                     maybe (setStatus s Ok) recordError me
                     endSpan s Nothing
@@ -85,7 +87,7 @@ tracerEventBackend tracer render = backend
               addEvent s $
                 NewEvent
                   { newEventName = eventName,
-                    newEventAttributes = concatMap renderField newEventInitialFields,
+                    newEventAttributes = HashMap.fromList $ concatMap renderField newEventInitialFields,
                     newEventTimestamp = Nothing
                   }
               pure s

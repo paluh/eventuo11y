@@ -21,7 +21,7 @@
     haskell-nix,
   } @ inputs: let
     defaultPackageName = "eventuo11y:lib:eventuo11y";
-    extraShellPackages = pkgs: with pkgs; [treefmt alejandra ormolu haskellPackages.cabal-fmt];
+    extraShellPackages = pkgs: with pkgs; [treefmt alejandra ];
     supportedSystems = ["x86_64-linux"];
 
     ifExists = p:
@@ -50,36 +50,24 @@
                 inherit (haskell-nix) config;
               };
 
-              # tools = {
-              #   cabal = {
-              #     inherit (project) index-state evalSystem;
-              #     version = "3.8.1.0";
-              #     materialized = materializedFor "cabal";
-              #   };
-              #   hoogle = {
-              #     inherit (project) index-state evalSystem;
-              #     version = "5.0.18.3";
-              #     materialized = materializedFor "hoogle";
-              #   };
-              # };
-
               project = pkgs.haskell-nix.cabalProject' {
                 inherit evalSystem;
                 src = ./.;
                 compiler-nix-name = "ghc98";
-                # shell.tools = tools;
-                # shell.nativeBuildInputs = extraShellPackages pkgs;
+                shell.tools = {
+                  cabal = "latest";
+                  cabal-fmt = "latest";
+                  fourmolu = "latest";
+                  haskell-language-server = "latest";
+                  hoogle = "latest";
+                  hlint = "latest";
+                  stylish-haskell = "latest";
+                };
+                shell.nativeBuildInputs = extraShellPackages pkgs;
                 # shell.additional = hpkgs: [hpkgs.temporary];
                 # materialized = materializedFor "project";
 
-                # flake.variants = {
-                #   # ghc966 = {}; # Alias for the default variant
-                #   # ghc984.compiler-nix-name = "ghc984";
-                #   # ghc9102.compiler-nix-name = "ghc9102";
-                #   ghc984 = {};
-                # };
               };
-              # tools-built = project.tools tools;
             in {
               inherit pkgs project;
 
